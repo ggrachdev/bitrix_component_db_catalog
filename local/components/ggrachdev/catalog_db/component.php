@@ -5,10 +5,9 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Loader;
 use Bitrix\Iblock\Iblock;
 
+$arResult['ACTIVE_ELEMENTS'] = [];
+$arResult['ACTIVE_ELEMENTS_CODE'] = [];
 $arResult['CATALOG'] = [
-    'ACTIVE_ELEMENTS' => [
-        
-    ],
     'ITEMS_LEVEL_1' => [
     ],
     'ITEMS_LEVEL_2' => [
@@ -25,6 +24,7 @@ class DbCatalogFiller {
 
     public static function fill(&$arResult, &$arParams) {
 
+        $arRequestChunks = DbCatalogUtils::getNowRequestChunks();
         $nowDepth = $arResult['NOW_DEPTH'];
         $maxLevelDepth = $arResult['MAX_DEPTH'];
 
@@ -49,22 +49,29 @@ class DbCatalogFiller {
         }
 
         if ($nowDepth > 1) {
+            
             for ($depth = 2; $depth <= $maxLevelDepth; $depth++) {
 
-                DbCatalogUtils::fillActiveElement($depth-1, $arResult);
-                $filter = \DbCatalogUtils::getFilerForDepth($depth, $arResult, $arParams);
+                DbCatalogUtils::fillActiveElement($depth - 1, $arResult, $arParams);
+                $dbDepth = $arParams['ORM_TABLE_CLASS']::getList([
+                        'select' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']],
+                        'filter' => \DbCatalogUtils::getFilerForDepth($depth, $arResult, $arParams),
+                        'group' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]
+                ]);
 
-//                $dbDepth = $arParams['ORM_TABLE_CLASS']::getList([
-//                        'select' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']],
-//                        'filter' => [
-//                            
-//                        ],
-//                        'group' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]
-//                ]);
-//
-//                $resDepth = $dbDepth->fetchAll();
-//
-//                $arResult['CATALOG']['ITEMS_LEVEL_' . $depth] = $resDepth;
+                $resDepth = $dbDepth->fetchAll();
+
+                if (!empty($resDepth)) {
+
+                    $arResult['CATALOG']['ITEMS_LEVEL_' . $depth] = $resDepth;
+
+                    foreach ($arResult['CATALOG']['ITEMS_LEVEL_' . $depth] as &$item) {
+                        $item['NAME'] = $item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']];
+                        unset($item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]);
+                        $item['CODE'] = \Cutil::translit($item['NAME'], "ru");
+                        $item['LINK'] = '/'.implode('/', $arRequestChunks).'/'.$item['CODE'].'/';
+                    }
+                }
             }
         }
     }
@@ -72,18 +79,17 @@ class DbCatalogFiller {
 }
 
 class DbCatalogUtils {
-    
-    public static function fillActiveElement($depth, &$arResult)
-    {
-        if(!empty($arResult['CATALOG']['ITEMS_LEVEL_'.$depth])) {
+
+    public static function fillActiveElement($depth, &$arResult, &$arParams) {
+        if (!empty($arResult['CATALOG']['ITEMS_LEVEL_' . $depth])) {
             $arRequestChunks = self::getNowRequestChunks();
-            
+
             $codeActiveElement = $arRequestChunks[$depth];
-            
-            foreach ($arResult['CATALOG']['ITEMS_LEVEL_'.$depth] as $value) {
-                if($value['CODE'] === $codeActiveElement)
-                {
+
+            foreach ($arResult['CATALOG']['ITEMS_LEVEL_' . $depth] as $value) {
+                if ($value['CODE'] === $codeActiveElement) {
                     $arResult['ACTIVE_ELEMENTS'][$depth] = $value;
+                    $arResult['ACTIVE_ELEMENTS_CODE'][$arParams['CODE_COLUMN_' . $depth . '_LEVEL']] = $value;
                     break;
                 }
             }
@@ -94,15 +100,10 @@ class DbCatalogUtils {
         $arFilter = [];
 
         if ($arResult['NOW_DEPTH'] > 1) {
-            $arRequestChunks = self::getNowRequestChunks();
-            
-            if(!empty($arParams['CODE_COLUMN_'.$depth.'_LEVEL'])) {
-                $arFilter[$arParams['CODE_COLUMN_'.$depth.'_LEVEL']] = $arResult['ACTIVE_ELEMENTS'][$depth-1]['NAME'];
+            if (!empty($arParams['CODE_COLUMN_' . $depth . '_LEVEL'])) {
+                $arFilter[$arParams['CODE_COLUMN_' . ($depth - 1) . '_LEVEL']] = $arResult['ACTIVE_ELEMENTS'][$depth - 1]['NAME'];
             }
         }
-
-        dre($depth);
-        dre($arFilter);
 
         return $arFilter;
     }
@@ -145,7 +146,6 @@ try {
     $arResult['NOW_DEPTH'] = \DbCatalogUtils::determineСurrentDepth();
 
     DbCatalogFiller::fill($arResult, $arParams);
-
     if ($arResult['NOW_DEPTH'] === 1) {
         $this->IncludeComponentTemplate('sections');
     } else {
