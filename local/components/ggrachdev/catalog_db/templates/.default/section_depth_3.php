@@ -3,8 +3,6 @@
 <?
 
 if (!empty($arResult['CATALOG']['ITEMS_LEVEL_3'])):
-    
-    dre($arResult, '+-a');
     ?>
 
     <div class="section_block section_block_brands">

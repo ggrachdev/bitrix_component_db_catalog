@@ -113,7 +113,7 @@ class DbCatalogUtils {
     }
 
     public static function getNowRequestChunks() {
-        return explode('/', trim($_SERVER['REQUEST_URI'], '/'));
+        return explode('/', trim(strtok($_SERVER['REQUEST_URI'], '?'), '/'));
     }
 
 }
@@ -146,6 +146,15 @@ try {
     $arResult['NOW_DEPTH'] = \DbCatalogUtils::determineСurrentDepth();
 
     DbCatalogFiller::fill($arResult, $arParams);
+    
+    $arRequestChunks = DbCatalogUtils::getNowRequestChunks();
+    
+    $i = 0;
+    foreach ($arResult['ACTIVE_ELEMENTS_CODE'] as $value) {
+        $i++;
+        $APPLICATION->AddChainItem($value['NAME'], '/'.implode('/', \array_slice($arRequestChunks, 0, ($i+1))).'/');
+    }
+    
     if ($arResult['NOW_DEPTH'] === 1) {
         $this->IncludeComponentTemplate('sections');
     } else {

@@ -5,7 +5,6 @@
 if (!empty($arResult['CATALOG']['ITEMS_LEVEL_2'])):
     ?>
 
-
     <div class="section_block section_block_brands">
         <div class="sections_wrapper ">
             <div class="list items">
