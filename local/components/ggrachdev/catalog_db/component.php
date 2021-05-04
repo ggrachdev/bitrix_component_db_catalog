@@ -6,6 +6,9 @@ use Bitrix\Main\Loader;
 use Bitrix\Iblock\Iblock;
 
 $arResult['CATALOG'] = [
+    'ACTIVE_ELEMENTS' => [
+        
+    ],
     'ITEMS_LEVEL_1' => [
     ],
     'ITEMS_LEVEL_2' => [
@@ -20,17 +23,20 @@ $arResult['NOW_DEPTH'] = 1;
 
 class DbCatalogFiller {
 
-    public static function loadDepth1(&$arResult, &$arParams) {
+    public static function fill(&$arResult, &$arParams) {
 
-        $dbres = $arParams['ORM_TABLE_CLASS']::getList([
+        $nowDepth = $arResult['NOW_DEPTH'];
+        $maxLevelDepth = $arResult['MAX_DEPTH'];
+
+        $dbDepth1 = $arParams['ORM_TABLE_CLASS']::getList([
                 'select' => [$arParams['CODE_COLUMN_1_LEVEL']],
                 'group' => [$arParams['CODE_COLUMN_1_LEVEL']]
         ]);
 
-        $res = $dbres->fetchAll();
+        $resDepth1 = $dbDepth1->fetchAll();
 
-        if (!empty($res)) {
-            $arResult['CATALOG']['ITEMS_LEVEL_1'] = $res;
+        if (!empty($resDepth1)) {
+            $arResult['CATALOG']['ITEMS_LEVEL_1'] = $resDepth1;
 
             foreach ($arResult['CATALOG']['ITEMS_LEVEL_1'] as &$item) {
                 $item['NAME'] = $item[$arParams['CODE_COLUMN_1_LEVEL']];
@@ -38,17 +44,77 @@ class DbCatalogFiller {
                 $item['CODE'] = \Cutil::translit($item['NAME'], "ru");
                 $item['LINK'] = $arParams['SECTIONS_TEMPLATE'] . str_replace('#SECTION_CODE_PATH#', $item['CODE'], $arParams['SECTION_TEMPLATE']);
             }
+        } else {
+            $arResult['CATALOG']['ITEMS_LEVEL_1'] = [];
+        }
+
+        if ($nowDepth > 1) {
+            for ($depth = 2; $depth <= $maxLevelDepth; $depth++) {
+
+                DbCatalogUtils::fillActiveElement($depth-1, $arResult);
+                $filter = \DbCatalogUtils::getFilerForDepth($depth, $arResult, $arParams);
+
+//                $dbDepth = $arParams['ORM_TABLE_CLASS']::getList([
+//                        'select' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']],
+//                        'filter' => [
+//                            
+//                        ],
+//                        'group' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]
+//                ]);
+//
+//                $resDepth = $dbDepth->fetchAll();
+//
+//                $arResult['CATALOG']['ITEMS_LEVEL_' . $depth] = $resDepth;
+            }
         }
     }
 
 }
 
 class DbCatalogUtils {
-    public static function determineСurrentDepth()
+    
+    public static function fillActiveElement($depth, &$arResult)
     {
-        $arRequestChunks = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
-        return sizeof($arRequestChunks);
+        if(!empty($arResult['CATALOG']['ITEMS_LEVEL_'.$depth])) {
+            $arRequestChunks = self::getNowRequestChunks();
+            
+            $codeActiveElement = $arRequestChunks[$depth];
+            
+            foreach ($arResult['CATALOG']['ITEMS_LEVEL_'.$depth] as $value) {
+                if($value['CODE'] === $codeActiveElement)
+                {
+                    $arResult['ACTIVE_ELEMENTS'][$depth] = $value;
+                    break;
+                }
+            }
+        }
     }
+
+    public static function getFilerForDepth($depth, $arResult, $arParams) {
+        $arFilter = [];
+
+        if ($arResult['NOW_DEPTH'] > 1) {
+            $arRequestChunks = self::getNowRequestChunks();
+            
+            if(!empty($arParams['CODE_COLUMN_'.$depth.'_LEVEL'])) {
+                $arFilter[$arParams['CODE_COLUMN_'.$depth.'_LEVEL']] = $arResult['ACTIVE_ELEMENTS'][$depth-1]['NAME'];
+            }
+        }
+
+        dre($depth);
+        dre($arFilter);
+
+        return $arFilter;
+    }
+
+    public static function determineСurrentDepth() {
+        return sizeof(self::getNowRequestChunks());
+    }
+
+    public static function getNowRequestChunks() {
+        return explode('/', trim($_SERVER['REQUEST_URI'], '/'));
+    }
+
 }
 
 try {
@@ -64,12 +130,26 @@ try {
         throw new Exception('Not found class $arParams[\'CODE_COLUMN_1_LEVEL\']');
     }
 
+    if (!empty($arParams['CODE_COLUMN_2_LEVEL'])) {
+        $arResult['MAX_DEPTH'] = 2;
+
+        if (!empty($arParams['CODE_COLUMN_3_LEVEL'])) {
+            $arResult['MAX_DEPTH'] = 3;
+
+            if (!empty($arParams['CODE_COLUMN_4_LEVEL'])) {
+                $arResult['MAX_DEPTH'] = 4;
+            }
+        }
+    }
+
     $arResult['NOW_DEPTH'] = \DbCatalogUtils::determineСurrentDepth();
-    
-    DbCatalogFiller::loadDepth1($arResult, $arParams);
+
+    DbCatalogFiller::fill($arResult, $arParams);
 
     if ($arResult['NOW_DEPTH'] === 1) {
         $this->IncludeComponentTemplate('sections');
+    } else {
+        $this->IncludeComponentTemplate('section_depth_' . $arResult['NOW_DEPTH']);
     }
 } catch (Exception $ex) {
     $APPLICATION->ThrowException($ex->getMessage());
