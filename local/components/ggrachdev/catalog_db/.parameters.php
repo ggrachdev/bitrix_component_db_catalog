@@ -13,10 +13,23 @@ Loc::loadMessages(__FILE__);
 $arComponentParameters = [
     "GROUPS" => [],
     "PARAMETERS" => [
-        "IBLOCK_ID" => [
+        "ORM_TABLE_CLASS" => [
             "PARENT" => "BASE",
-            "NAME" => 'Название таблицы',
+            "NAME" => 'Класс ORM формата \\A\\B\\C',
+            "COLS" => 40,
             "TYPE" => "STRING"
+        ],
+        "SECTIONS_TEMPLATE" => [
+            "PARENT" => "BASE",
+            "NAME" => 'Путь до секций',
+            "TYPE" => "STRING",
+            "DEFAULT" => "/section/"
+        ],
+        "SECTION_TEMPLATE" => [
+            "PARENT" => "BASE",
+            "NAME" => 'Путь до секции',
+            "TYPE" => "STRING",
+            "DEFAULT" => "#SECTION_CODE_PATH#/",
         ],
         "CODE_COLUMN_1_LEVEL" => [
             "PARENT" => "BASE",
