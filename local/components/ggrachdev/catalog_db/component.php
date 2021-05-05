@@ -173,13 +173,12 @@ try {
         $APPLICATION->AddChainItem($value['NAME'], '/' . implode('/', \array_slice($arRequestChunks, 0, $i)) . '/');
     }
 
-    if ($arResult['NOW_DEPTH'] === 1) {
-        $this->IncludeComponentTemplate('sections');
-    } else if ($arResult['NOW_DEPTH'] === $arResult['MAX_DEPTH'] + 1) {
+    if ($arResult['NOW_DEPTH'] === $arResult['MAX_DEPTH'] + 1) {
         $this->IncludeComponentTemplate('detail');
     } else {
         $this->IncludeComponentTemplate('section_depth_' . $arResult['NOW_DEPTH']);
     }
+    
 } catch (Exception $ex) {
     $APPLICATION->ThrowException($ex->getMessage());
     ShowError($ex->getMessage());
