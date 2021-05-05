@@ -51,5 +51,15 @@ $arComponentParameters = [
             "NAME" => 'Код колонки 4 уровня',
             "TYPE" => "STRING"
         ],
+        "CODE_COLUMN_5_LEVEL" => [
+            "PARENT" => "BASE",
+            "NAME" => 'Код колонки 5 уровня',
+            "TYPE" => "STRING"
+        ],
+        "CODE_COLUMN_6_LEVEL" => [
+            "PARENT" => "BASE",
+            "NAME" => 'Код колонки 6 уровня',
+            "TYPE" => "STRING"
+        ],
     ]
 ];
