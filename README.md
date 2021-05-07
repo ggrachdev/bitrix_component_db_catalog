@@ -1,6 +1,6 @@
 Компонент, который выводит каталог поверх базы данных с разделами, которые являются колонками БД. Протестировано на базе данных с 300 тысячами строками
 
-Пример вызова компонента с каталогом:
+Пример вызова компонента с каталогом, пока что предел только 5 уровней по глубине:
 ```php
 <?
 $APPLICATION->IncludeComponent(
@@ -17,8 +17,6 @@ $APPLICATION->IncludeComponent(
 		"ORM_TABLE_CLASS" => "\\FRED\\Models\\BatteryTable",
 		"SECTIONS_TEMPLATE" => "/auto/",
 		"SECTION_TEMPLATE" => "#SECTION_CODE_PATH#/",
-		"CODE_COLUMN_5_LEVEL" => "",
-		"CODE_COLUMN_6_LEVEL" => "",
 		"SET_404" => "Y"
 	),
 	false
