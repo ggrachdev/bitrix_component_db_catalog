@@ -15,6 +15,8 @@ $arResult['CATALOG'] = [
     'ITEMS_LEVEL_3' => [
     ],
     'ITEMS_LEVEL_4' => [
+    ],
+    'ITEMS_LEVEL_5' => [
     ]
 ];
 
@@ -30,7 +32,8 @@ class DbCatalogFiller {
 
         $dbDepth1 = $arParams['ORM_TABLE_CLASS']::getList([
                 'select' => [$arParams['CODE_COLUMN_1_LEVEL']],
-                'group' => [$arParams['CODE_COLUMN_1_LEVEL']]
+                'group' => [$arParams['CODE_COLUMN_1_LEVEL']],
+                "cache" => ["ttl" => 3600]
         ]);
 
         $resDepth1 = $dbDepth1->fetchAll();
@@ -55,6 +58,7 @@ class DbCatalogFiller {
                 DbCatalogUtils::fillActiveElement($depth - 1, $arResult, $arParams);
                 $dbDepth = $arParams['ORM_TABLE_CLASS']::getList([
                         'select' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']],
+                        "cache" => ["ttl" => 3600],
                         'filter' => \DbCatalogUtils::getFilerForDepth($depth, $arResult, $arParams),
                         'group' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]
                 ]);
@@ -65,11 +69,16 @@ class DbCatalogFiller {
 
                     $arResult['CATALOG']['ITEMS_LEVEL_' . $depth] = $resDepth;
 
+                    $startDetailUrl = '/' . implode('/', $arRequestChunks) . '/';
+
                     foreach ($arResult['CATALOG']['ITEMS_LEVEL_' . $depth] as &$item) {
                         $item['NAME'] = $item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']];
+
                         unset($item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]);
                         $item['CODE'] = \Cutil::translit($item['NAME'], "ru");
-                        $item['LINK'] = '/' . implode('/', $arRequestChunks) . '/' . $item['CODE'] . '/';
+
+//                        $item['NAME'] = preg_replace('/\(.*/', '', $item['NAME']);
+                        $item['LINK'] = $startDetailUrl . $item['CODE'] . '/';
                     }
                 }
             }
@@ -165,20 +174,11 @@ try {
 
     DbCatalogFiller::fill($arResult, $arParams);
 
-    $arRequestChunks = DbCatalogUtils::getNowRequestChunks();
-
-    $i = 0;
-    foreach ($arResult['ACTIVE_ELEMENTS_CODE'] as $value) {
-        $i++;
-        $APPLICATION->AddChainItem($value['NAME'], '/' . implode('/', \array_slice($arRequestChunks, 0, $i)) . '/');
-    }
-
     if ($arResult['NOW_DEPTH'] === $arResult['MAX_DEPTH'] + 1) {
         $this->IncludeComponentTemplate('detail');
     } else {
         $this->IncludeComponentTemplate('section_depth_' . $arResult['NOW_DEPTH']);
     }
-    
 } catch (Exception $ex) {
     $APPLICATION->ThrowException($ex->getMessage());
     ShowError($ex->getMessage());

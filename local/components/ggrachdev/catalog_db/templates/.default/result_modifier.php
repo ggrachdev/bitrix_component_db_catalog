@@ -8,7 +8,37 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 /** @var array $arResult */
 $arResult['FILTER_AKB'] = null;
 
-if ($arResult['NOW_DEPTH'] === 3 || $arResult['NOW_DEPTH'] === 4) {
+if ($arResult['NOW_DEPTH'] === 1) {
+
+
+    foreach ($arResult['CATALOG']['ITEMS_LEVEL_1'] as $k => &$v) {
+
+        if (!in_array(\strtolower($v['NAME']), ['lada', 'renault', 'kia', 'nissan', 'toyota', 'hyundai', 'ford', 'volkswagen', 'chevrolet', 'skoda', 'mazda', 'opel', 'mitsubishi', 'bmw', 'daewoo', 'mini', 'honda', 'mercedes-benz', 'peugeot', 'uaz', 'audi', 'suzuki', 'land rover', 'citroen', 'geely', 'gaz', 'subaru', 'lifan', 'chery', 'lexus', 'volvo', 'fiat', 'porsche', 'greatwall', 'infiniti', 'datsun', 'ssangyong', 'zil', 'chrysler', 'jeep', 'kamaz', 'man', 'iveco', 'smart', 'zaz', 'maz', 'jaguar', 'isuzu', 'alfa romeo', 'scania', 'daf', 'changan', 'freightliner', 'haval', 'hino', 'cadillac', 'dodge'])) {
+            unset($arResult['CATALOG']['ITEMS_LEVEL_1'][$k]);
+            continue;
+        }
+    }
+}
+
+
+$arCorrectFrom = ['Saloon', 'Coupe', 'Hatchback', 'Estate', 'Tourer', 'Others', '|others'];
+$arCorrectTo = ['Седан', 'Купе', 'Хэтчбек', 'Универсал', 'Туринг', 'Прочие', 'Прочие'];
+
+foreach ($arResult['CATALOG'] as &$arChunksItems) {
+    foreach ($arChunksItems as &$arItem) {
+        $arItem['CORRECT_NAME'] = str_replace($arCorrectFrom, $arCorrectTo, $arItem['NAME']);
+    }
+}
+
+foreach ($arResult['ACTIVE_ELEMENTS'] as &$arItem) {
+    $arItem['CORRECT_NAME'] = str_replace($arCorrectFrom, $arCorrectTo, $arItem['NAME']);
+}
+
+foreach ($arResult['ACTIVE_ELEMENTS_CODE'] as &$arItem) {
+    $arItem['CORRECT_NAME'] = str_replace($arCorrectFrom, $arCorrectTo, $arItem['NAME']);
+}
+
+if ($arResult['NOW_DEPTH'] === 3 || $arResult['NOW_DEPTH'] === 4 || $arResult['NOW_DEPTH'] === 5) {
 
     $arFilter = [];
 
@@ -93,3 +123,14 @@ if ($arResult['NOW_DEPTH'] === 3 || $arResult['NOW_DEPTH'] === 4) {
         ];
     }
 }
+
+$arRequestChunks = DbCatalogUtils::getNowRequestChunks();
+$i = 0;
+foreach ($arResult['ACTIVE_ELEMENTS_CODE'] as $value) {
+    $i++;
+    $APPLICATION->AddChainItem($value['CORRECT_NAME'], '/' . implode('/', \array_slice($arRequestChunks, 0, $i+1)) . '/');
+}
+
+
+$cp = $this->__component;
+$cp->SetResultCacheKeys(\array_keys($arResult));
