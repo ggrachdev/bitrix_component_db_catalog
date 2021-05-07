@@ -95,13 +95,20 @@ class DbCatalogUtils {
             $arRequestChunks = self::getNowRequestChunks();
 
             $codeActiveElement = $arRequestChunks[$depth];
+            $isSearched = false;
 
             foreach ($arResult['CATALOG']['ITEMS_LEVEL_' . $depth] as $value) {
                 if ($value['CODE'] === $codeActiveElement) {
                     $arResult['ACTIVE_ELEMENTS'][$depth] = $value;
                     $arResult['ACTIVE_ELEMENTS_CODE'][$arParams['CODE_COLUMN_' . $depth . '_LEVEL']] = $value;
+                    $isSearched = true;
                     break;
                 }
+            }
+
+
+            if ($isSearched === false && $depth != $arResult['NOW_DEPTH']) {
+                throw new Exception('Not found element');
             }
         }
     }
@@ -182,4 +189,9 @@ try {
 } catch (Exception $ex) {
     $APPLICATION->ThrowException($ex->getMessage());
     ShowError($ex->getMessage());
+
+    if ($arParams['SET_404'] === 'Y') {
+        define('ERROR_404', 'Y');
+        CHTTP::SetStatus("404 Not Found");
+    }
 }

@@ -61,5 +61,10 @@ $arComponentParameters = [
             "NAME" => 'Код колонки 6 уровня',
             "TYPE" => "STRING"
         ],
+        "SET_404" => [
+            "PARENT" => "BASE",
+            "NAME" => 'Устанавливать 404 статус при некорректном вводе элемента',
+            "TYPE" => "CHECKBOX"
+        ],
     ]
 ];
