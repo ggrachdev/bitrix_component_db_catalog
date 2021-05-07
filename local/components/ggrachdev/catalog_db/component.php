@@ -15,6 +15,8 @@ $arResult['CATALOG'] = [
     'ITEMS_LEVEL_3' => [
     ],
     'ITEMS_LEVEL_4' => [
+    ],
+    'ITEMS_LEVEL_5' => [
     ]
 ];
 
@@ -30,7 +32,8 @@ class DbCatalogFiller {
 
         $dbDepth1 = $arParams['ORM_TABLE_CLASS']::getList([
                 'select' => [$arParams['CODE_COLUMN_1_LEVEL']],
-                'group' => [$arParams['CODE_COLUMN_1_LEVEL']]
+                'group' => [$arParams['CODE_COLUMN_1_LEVEL']],
+                "cache" => ["ttl" => 3600]
         ]);
 
         $resDepth1 = $dbDepth1->fetchAll();
@@ -49,12 +52,13 @@ class DbCatalogFiller {
         }
 
         if ($nowDepth > 1) {
-            
+
             for ($depth = 2; $depth <= $maxLevelDepth; $depth++) {
 
                 DbCatalogUtils::fillActiveElement($depth - 1, $arResult, $arParams);
                 $dbDepth = $arParams['ORM_TABLE_CLASS']::getList([
                         'select' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']],
+                        "cache" => ["ttl" => 3600],
                         'filter' => \DbCatalogUtils::getFilerForDepth($depth, $arResult, $arParams),
                         'group' => [$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]
                 ]);
@@ -65,14 +69,20 @@ class DbCatalogFiller {
 
                     $arResult['CATALOG']['ITEMS_LEVEL_' . $depth] = $resDepth;
 
+                    $startDetailUrl = '/' . implode('/', $arRequestChunks) . '/';
+
                     foreach ($arResult['CATALOG']['ITEMS_LEVEL_' . $depth] as &$item) {
                         $item['NAME'] = $item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']];
+
                         unset($item[$arParams['CODE_COLUMN_' . $depth . '_LEVEL']]);
                         $item['CODE'] = \Cutil::translit($item['NAME'], "ru");
-                        $item['LINK'] = '/'.implode('/', $arRequestChunks).'/'.$item['CODE'].'/';
+
+//                        $item['NAME'] = preg_replace('/\(.*/', '', $item['NAME']);
+                        $item['LINK'] = $startDetailUrl . $item['CODE'] . '/';
                     }
                 }
             }
+            DbCatalogUtils::fillActiveElement($depth - 1, $arResult, $arParams);
         }
     }
 
@@ -108,12 +118,39 @@ class DbCatalogUtils {
         return $arFilter;
     }
 
+    public static function determineMaxDepth(array $arParams) {
+
+        $maxDepth = 1;
+
+        if (!empty($arParams['CODE_COLUMN_2_LEVEL'])) {
+            $maxDepth = 2;
+
+            if (!empty($arParams['CODE_COLUMN_3_LEVEL'])) {
+                $maxDepth = 3;
+
+                if (!empty($arParams['CODE_COLUMN_4_LEVEL'])) {
+                    $maxDepth = 4;
+
+                    if (!empty($arParams['CODE_COLUMN_5_LEVEL'])) {
+                        $maxDepth = 5;
+
+                        if (!empty($arParams['CODE_COLUMN_6_LEVEL'])) {
+                            $maxDepth = 6;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $maxDepth;
+    }
+
     public static function determineСurrentDepth() {
         return sizeof(self::getNowRequestChunks());
     }
 
     public static function getNowRequestChunks() {
-        return explode('/', trim($_SERVER['REQUEST_URI'], '/'));
+        return explode('/', trim(strtok($_SERVER['REQUEST_URI'], '?'), '/'));
     }
 
 }
@@ -131,23 +168,14 @@ try {
         throw new Exception('Not found class $arParams[\'CODE_COLUMN_1_LEVEL\']');
     }
 
-    if (!empty($arParams['CODE_COLUMN_2_LEVEL'])) {
-        $arResult['MAX_DEPTH'] = 2;
-
-        if (!empty($arParams['CODE_COLUMN_3_LEVEL'])) {
-            $arResult['MAX_DEPTH'] = 3;
-
-            if (!empty($arParams['CODE_COLUMN_4_LEVEL'])) {
-                $arResult['MAX_DEPTH'] = 4;
-            }
-        }
-    }
+    $arResult['MAX_DEPTH'] = \DbCatalogUtils::determineMaxDepth($arParams);
 
     $arResult['NOW_DEPTH'] = \DbCatalogUtils::determineСurrentDepth();
 
     DbCatalogFiller::fill($arResult, $arParams);
-    if ($arResult['NOW_DEPTH'] === 1) {
-        $this->IncludeComponentTemplate('sections');
+
+    if ($arResult['NOW_DEPTH'] === $arResult['MAX_DEPTH'] + 1) {
+        $this->IncludeComponentTemplate('detail');
     } else {
         $this->IncludeComponentTemplate('section_depth_' . $arResult['NOW_DEPTH']);
     }

@@ -5,6 +5,9 @@ if (!empty($arResult['CATALOG']['ITEMS_LEVEL_1'])):
     ?>
 
     <div class="section_block section_block_brands">
+        
+        <h2>Марка</h2>
+        
         <div class="sections_wrapper ">
             <div class="list items">
                 <div class="row margin0 flexbox">
